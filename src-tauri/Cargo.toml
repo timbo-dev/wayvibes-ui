@@ -28,4 +28,8 @@ serde_json = "1"
 thiserror = "1"
 tokio = { version = "1", features = ["fs", "process"] }
 zip = "0.6"
+flate2 = "1.1.8"
+tar = "0.4.44"
+sevenz-rust = "0.6.1"
+unrar = "0.5.8"
 

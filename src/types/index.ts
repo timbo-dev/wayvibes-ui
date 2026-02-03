@@ -2,6 +2,7 @@ export interface WayvibesStatus {
   installed: boolean;
   running: boolean;
   version: string | null;
+  pid?: number | null;
 }
 
 export interface SoundPack {
