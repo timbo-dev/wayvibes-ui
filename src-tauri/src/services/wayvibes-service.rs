@@ -5,6 +5,7 @@ use tokio::process::Command;
 use crate::error::AppError;
 use crate::models::WayvibesStatus;
 
+/// Get the current status of wayvibes
 pub async fn get_status() -> Result<WayvibesStatus, AppError> {
   let installed = is_installed().await;
   let running = if installed {
@@ -16,34 +17,73 @@ pub async fn get_status() -> Result<WayvibesStatus, AppError> {
   Ok(WayvibesStatus {
     installed,
     running,
-    // wayvibes doesn't have a --version flag
     version: None,
   })
 }
 
-pub async fn set_volume(volume: f32) -> Result<(), AppError> {
+/// Start wayvibes with a sound pack and volume
+/// Usage: wayvibes [soundpack_path] -v <volume> --background
+pub async fn start(pack_path: &Path, volume: f32) -> Result<(), AppError> {
   ensure_installed().await?;
-  run_wayvibes(&["set-volume", &format!("{volume:.2}")]).await?;
-  Ok(())
-}
 
-pub async fn set_active_pack(pack_path: &Path) -> Result<(), AppError> {
-  ensure_installed().await?;
-  let path = pack_path
+  // Stop any existing instance first
+  let _ = stop().await;
+
+  let path_str = pack_path
     .to_str()
     .ok_or_else(|| AppError::WayvibesCommand("Caminho inválido".into()))?;
-  run_wayvibes(&["set-pack", path]).await?;
+
+  // Volume range is 0.0-10.0 in wayvibes, but our UI uses 0.0-1.0
+  // Convert: UI 0.0-1.0 -> wayvibes 0.0-10.0
+  let wayvibes_volume = volume * 10.0;
+
+  println!(
+    "[wayvibes] Starting with pack: {} volume: {}",
+    path_str, wayvibes_volume
+  );
+
+  // Start wayvibes in background mode
+  let output = Command::new("wayvibes")
+    .arg(path_str)
+    .arg("-v")
+    .arg(format!("{:.1}", wayvibes_volume))
+    .arg("--background")
+    .output()
+    .await?;
+
+  if !output.status.success() {
+    let error = String::from_utf8_lossy(&output.stderr).to_string();
+    println!("[wayvibes] Failed to start: {}", error);
+    return Err(AppError::WayvibesCommand(error));
+  }
+
+  println!("[wayvibes] Started successfully");
   Ok(())
 }
 
-pub async fn set_paused(paused: bool) -> Result<(), AppError> {
-  ensure_installed().await?;
-  if paused {
-    run_wayvibes(&["pause"]).await?;
+/// Stop the running wayvibes process
+pub async fn stop() -> Result<(), AppError> {
+  println!("[wayvibes] Stopping...");
+
+  let output = Command::new("pkill")
+    .arg("-x")
+    .arg("wayvibes")
+    .output()
+    .await?;
+
+  // pkill returns 1 if no process was found, which is fine
+  if output.status.success() {
+    println!("[wayvibes] Stopped successfully");
   } else {
-    run_wayvibes(&["resume"]).await?;
+    println!("[wayvibes] No running process found");
   }
+
   Ok(())
+}
+
+/// Restart wayvibes with new settings (pack and/or volume)
+pub async fn restart(pack_path: &Path, volume: f32) -> Result<(), AppError> {
+  start(pack_path, volume).await
 }
 
 async fn is_installed() -> bool {
@@ -69,13 +109,4 @@ async fn ensure_installed() -> Result<(), AppError> {
     return Err(AppError::WayvibesMissing);
   }
   Ok(())
-}
-
-async fn run_wayvibes(args: &[&str]) -> Result<(), AppError> {
-  let output = Command::new("wayvibes").args(args).output().await?;
-  if output.status.success() {
-    return Ok(());
-  }
-  let error = String::from_utf8_lossy(&output.stderr).to_string();
-  Err(AppError::WayvibesCommand(error))
 }

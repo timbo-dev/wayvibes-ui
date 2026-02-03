@@ -15,7 +15,8 @@ pub async fn get_wayvibes_status() -> Result<WayvibesStatus, String> {
 #[tauri::command]
 pub async fn set_volume(state: State<'_, AppState>, volume: f32) -> Result<(), String> {
   let volume = volume.clamp(0.0, 1.0);
-  {
+
+  let (active_pack_id, paused) = {
     let mut config = state
       .config
       .lock()
@@ -24,18 +25,29 @@ pub async fn set_volume(state: State<'_, AppState>, volume: f32) -> Result<(), S
     state
       .save_config(&config)
       .map_err(|err| err.to_string())?;
-  }
-  if let Err(err) = wayvibes_service::set_volume(volume).await {
-    if !matches!(err, AppError::WayvibesMissing) {
-      return Err(err.to_string());
+    (config.active_pack_id.clone(), config.paused)
+  };
+
+  // If not paused and there's an active pack, restart with new volume
+  if !paused {
+    if let Some(pack_id) = active_pack_id {
+      let pack_path = state.packs_dir.join(&pack_id);
+      if pack_path.exists() {
+        if let Err(err) = wayvibes_service::restart(&pack_path, volume).await {
+          if !matches!(err, AppError::WayvibesMissing) {
+            return Err(err.to_string());
+          }
+        }
+      }
     }
   }
+
   Ok(())
 }
 
 #[tauri::command]
 pub async fn toggle_pause(state: State<'_, AppState>) -> Result<(), String> {
-  let paused = {
+  let (paused, active_pack_id, volume) = {
     let mut config = state
       .config
       .lock()
@@ -44,28 +56,41 @@ pub async fn toggle_pause(state: State<'_, AppState>) -> Result<(), String> {
     state
       .save_config(&config)
       .map_err(|err| err.to_string())?;
-    config.paused
+    (config.paused, config.active_pack_id.clone(), config.volume)
   };
 
-  if let Err(err) = wayvibes_service::set_paused(paused).await {
-    if !matches!(err, AppError::WayvibesMissing) {
-      return Err(err.to_string());
+  if paused {
+    // Stop wayvibes
+    if let Err(err) = wayvibes_service::stop().await {
+      if !matches!(err, AppError::WayvibesMissing) {
+        return Err(err.to_string());
+      }
+    }
+  } else {
+    // Resume: start wayvibes with active pack and volume
+    if let Some(pack_id) = active_pack_id {
+      let pack_path = state.packs_dir.join(&pack_id);
+      if pack_path.exists() {
+        if let Err(err) = wayvibes_service::start(&pack_path, volume).await {
+          if !matches!(err, AppError::WayvibesMissing) {
+            return Err(err.to_string());
+          }
+        }
+      }
     }
   }
+
   Ok(())
 }
 
 #[tauri::command]
-pub async fn set_active_pack(
-  state: State<'_, AppState>,
-  pack_id: String,
-) -> Result<(), String> {
+pub async fn set_active_pack(state: State<'_, AppState>, pack_id: String) -> Result<(), String> {
   let pack_path = state.packs_dir.join(&pack_id);
   if !pack_path.exists() {
     return Err("Pacote não encontrado".into());
   }
 
-  {
+  let (paused, volume) = {
     let mut config = state
       .config
       .lock()
@@ -74,12 +99,17 @@ pub async fn set_active_pack(
     state
       .save_config(&config)
       .map_err(|err| err.to_string())?;
-  }
+    (config.paused, config.volume)
+  };
 
-  if let Err(err) = wayvibes_service::set_active_pack(&pack_path).await {
-    if !matches!(err, AppError::WayvibesMissing) {
-      return Err(err.to_string());
+  // Start wayvibes with the new pack if not paused
+  if !paused {
+    if let Err(err) = wayvibes_service::start(&pack_path, volume).await {
+      if !matches!(err, AppError::WayvibesMissing) {
+        return Err(err.to_string());
+      }
     }
   }
+
   Ok(())
 }
