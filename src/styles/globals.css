@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+/* Min Dark inspired theme */
+:root {
+  /* Backgrounds */
+  --background: 0 0% 12%;           /* #1f1f1f */
+  --foreground: 0 0% 53%;           /* #888888 */
+  
+  /* Cards and panels */
+  --card: 0 0% 10%;                 /* #1A1A1A */
+  --card-foreground: 0 0% 88%;      /* #E0E0E0 */
+  
+  /* Popovers/dropdowns - solid background */
+  --popover: 0 0% 10%;              /* #1A1A1A */
+  --popover-foreground: 0 0% 88%;   /* #E0E0E0 */
+  
+  /* Primary actions */
+  --primary: 0 0% 20%;              /* #333333 */
+  --primary-foreground: 0 0% 98%;   /* #FAFAFA */
+  
+  /* Secondary elements */
+  --secondary: 0 0% 13%;            /* #212121 */
+  --secondary-foreground: 0 0% 76%; /* #C1C1C1 */
+  
+  /* Muted/subtle elements */
+  --muted: 0 0% 17%;                /* #2A2A2A */
+  --muted-foreground: 0 0% 45%;     /* #727272 */
+  
+  /* Accent - blue from Min Dark */
+  --accent: 212 100% 73%;           /* #79b8ff */
+  --accent-foreground: 0 0% 10%;    /* #1A1A1A */
+  
+  /* Destructive - red/pink from Min Dark */
+  --destructive: 354 100% 75%;      /* #FF7A84 */
+  --destructive-foreground: 0 0% 98%;
+  
+  /* Borders and inputs */
+  --border: 0 0% 21%;               /* #363636 */
+  --input: 0 0% 17%;                /* #2A2A2A */
+  --ring: 212 100% 73%;             /* #79b8ff */
+  
+  --radius: 6px;
+}
+
+.dark {
+  color-scheme: dark;
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
+body {
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Ensure dropdowns and popovers have solid backgrounds */
+[data-radix-popper-content-wrapper] {
+  --tw-bg-opacity: 1 !important;
+}
