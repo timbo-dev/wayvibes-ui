@@ -49,6 +49,7 @@ pub fn run() {
       commands::wayvibes_commands::set_active_pack,
       commands::wayvibes_commands::set_volume,
       commands::wayvibes_commands::toggle_pause,
+      commands::wayvibes_commands::stop_wayvibes,
       commands::config_commands::get_config,
     ])
     .run(tauri::generate_context!())

@@ -32,4 +32,5 @@ pub struct WayvibesStatus {
   pub installed: bool,
   pub running: bool,
   pub version: Option<String>,
+  pub pid: Option<u32>,
 }

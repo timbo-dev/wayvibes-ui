@@ -84,6 +84,28 @@ pub async fn toggle_pause(state: State<'_, AppState>) -> Result<(), String> {
 }
 
 #[tauri::command]
+pub async fn stop_wayvibes(state: State<'_, AppState>) -> Result<(), String> {
+  {
+    let mut config = state
+      .config
+      .lock()
+      .map_err(|_| "Falha ao acessar configuração".to_string())?;
+    config.paused = true;
+    state
+      .save_config(&config)
+      .map_err(|err| err.to_string())?;
+  }
+
+  if let Err(err) = wayvibes_service::stop().await {
+    if !matches!(err, AppError::WayvibesMissing) {
+      return Err(err.to_string());
+    }
+  }
+
+  Ok(())
+}
+
+#[tauri::command]
 pub async fn set_active_pack(state: State<'_, AppState>, pack_id: String) -> Result<(), String> {
   let pack_path = state.packs_dir.join(&pack_id);
   if !pack_path.exists() {

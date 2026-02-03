@@ -13,11 +13,17 @@ pub async fn get_status() -> Result<WayvibesStatus, AppError> {
   } else {
     false
   };
+  let pid = if running {
+    get_pid().await.unwrap_or(None)
+  } else {
+    None
+  };
 
   Ok(WayvibesStatus {
     installed,
     running,
     version: None,
+    pid,
   })
 }
 
@@ -102,6 +108,24 @@ async fn is_running() -> Result<bool, AppError> {
     .output()
     .await?;
   Ok(output.status.success())
+}
+
+async fn get_pid() -> Result<Option<u32>, AppError> {
+  let output = Command::new("pgrep")
+    .arg("-nx")
+    .arg("wayvibes")
+    .output()
+    .await?;
+  if !output.status.success() {
+    return Ok(None);
+  }
+  let raw = String::from_utf8_lossy(&output.stdout).trim().to_string();
+  if raw.is_empty() {
+    return Ok(None);
+  }
+  raw.parse::<u32>()
+    .map(Some)
+    .map_err(|_| AppError::WayvibesCommand("PID inválido".into()))
 }
 
 async fn ensure_installed() -> Result<(), AppError> {
