@@ -7,11 +7,6 @@ use crate::models::WayvibesStatus;
 
 pub async fn get_status() -> Result<WayvibesStatus, AppError> {
   let installed = is_installed().await;
-  let version = if installed {
-    get_version().await.ok()
-  } else {
-    None
-  };
   let running = if installed {
     is_running().await.unwrap_or(false)
   } else {
@@ -21,7 +16,8 @@ pub async fn get_status() -> Result<WayvibesStatus, AppError> {
   Ok(WayvibesStatus {
     installed,
     running,
-    version,
+    // wayvibes doesn't have a --version flag
+    version: None,
   })
 }
 
@@ -57,17 +53,6 @@ async fn is_installed() -> bool {
     .await
     .map(|output| output.status.success())
     .unwrap_or(false)
-}
-
-async fn get_version() -> Result<String, AppError> {
-  let output = Command::new("wayvibes").arg("--version").output().await?;
-  if !output.status.success() {
-    return Err(AppError::WayvibesCommand(
-      String::from_utf8_lossy(&output.stderr).to_string(),
-    ));
-  }
-  let raw = String::from_utf8_lossy(&output.stdout).trim().to_string();
-  Ok(raw)
 }
 
 async fn is_running() -> Result<bool, AppError> {
