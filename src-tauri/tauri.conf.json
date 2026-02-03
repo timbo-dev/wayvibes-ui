@@ -12,11 +12,15 @@
   "app": {
     "windows": [
       {
-        "title": "wayvibes-ui",
-        "width": 800,
-        "height": 600,
-        "transparent": true,
-        "decorations": false
+        "title": "WayVibes",
+        "width": 420,
+        "height": 580,
+        "visible": false,
+        "resizable": false,
+        "center": true,
+        "transparent": false,
+        "decorations": false,
+        "skipTaskbar": true
       }
     ],
     "security": {
