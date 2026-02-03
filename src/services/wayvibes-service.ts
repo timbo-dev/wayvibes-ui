@@ -14,6 +14,10 @@ export async function togglePause(): Promise<void> {
   await invoke("toggle_pause");
 }
 
+export async function stopWayvibes(): Promise<void> {
+  await invoke("stop_wayvibes");
+}
+
 export async function setActivePack(packId: string): Promise<void> {
   await invoke("set_active_pack", { packId });
 }

@@ -12,6 +12,7 @@ import {
   getWayvibesStatus,
   setActivePack,
   setVolume,
+  stopWayvibes,
   togglePause,
 } from "../services/wayvibes-service";
 
@@ -30,6 +31,7 @@ interface AppState {
   setActivePack: (packId: string) => Promise<void>;
   setVolume: (volume: number) => Promise<void>;
   togglePause: () => Promise<void>;
+  stopWayvibes: () => Promise<void>;
   setAutostartEnabled: (enabled: boolean) => Promise<void>;
   setLastError: (message: string | null) => void;
 }
@@ -38,6 +40,7 @@ const defaultStatus: WayvibesStatus = {
   installed: false,
   running: false,
   version: null,
+  pid: null,
 };
 
 function applyConfig(state: AppState, config: AppConfig) {
@@ -126,9 +129,13 @@ export const useAppStore = create<AppState>((set) => ({
     set({ isLoading: true, lastError: null });
     try {
       await setActivePack(packId);
-      const config = await getConfig();
+      const [config, status] = await Promise.all([
+        getConfig(),
+        getWayvibesStatus(),
+      ]);
       set((state) => ({
         ...applyConfig(state, config),
+        wayvibesStatus: status,
         isLoading: false,
       }));
     } catch (error) {
@@ -143,6 +150,8 @@ export const useAppStore = create<AppState>((set) => ({
     set({ volume });
     try {
       await setVolume(volume);
+      const status = await getWayvibesStatus();
+      set({ wayvibesStatus: status });
     } catch (error) {
       set({
         lastError:
@@ -154,9 +163,13 @@ export const useAppStore = create<AppState>((set) => ({
     set({ isLoading: true, lastError: null });
     try {
       await togglePause();
-      const config = await getConfig();
+      const [config, status] = await Promise.all([
+        getConfig(),
+        getWayvibesStatus(),
+      ]);
       set((state) => ({
         ...applyConfig(state, config),
+        wayvibesStatus: status,
         isLoading: false,
       }));
     } catch (error) {
@@ -164,6 +177,27 @@ export const useAppStore = create<AppState>((set) => ({
         isLoading: false,
         lastError:
           error instanceof Error ? error.message : "Falha ao alternar pausa",
+      });
+    }
+  },
+  stopWayvibes: async () => {
+    set({ isLoading: true, lastError: null });
+    try {
+      await stopWayvibes();
+      const [status, config] = await Promise.all([
+        getWayvibesStatus(),
+        getConfig(),
+      ]);
+      set((state) => ({
+        ...applyConfig(state, config),
+        wayvibesStatus: status,
+        isLoading: false,
+      }));
+    } catch (error) {
+      set({
+        isLoading: false,
+        lastError:
+          error instanceof Error ? error.message : "Falha ao parar o Wayvibes",
       });
     }
   },
