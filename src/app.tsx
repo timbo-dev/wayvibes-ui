@@ -5,7 +5,9 @@ import { AudioControlsPanel } from "./features/audio-controls/audio-controls-pan
 import { SettingsPanel } from "./features/settings/settings-panel";
 import { SoundPacksPanel } from "./features/sound-packs/sound-packs-panel";
 import { WayvibesStatusPanel } from "./features/wayvibes-status/wayvibes-status-panel";
+import { useAudioSpectrum } from "./hooks/use-audio-spectrum";
 import { useAppInit } from "./hooks/use-app-init";
+import { useKeypressFeedback } from "./hooks/use-keypress-feedback";
 import { useSoundPackImport } from "./hooks/use-sound-pack-import";
 import { cn } from "./lib/utils";
 import { useAppStore } from "./stores/app-store";
@@ -19,15 +21,36 @@ function App() {
     refreshAll,
   } = useAppStore();
 
-  const { onImportClick, onDrop, onDragOver } = useSoundPackImport();
+  const {
+    onImportClick,
+    onDrop,
+    onDragOver,
+    onDragEnter,
+    onDragLeave,
+    isDragging,
+  } = useSoundPackImport();
+  const { lastKey, pulseId } = useKeypressFeedback();
+  const audioSpectrum = useAudioSpectrum();
 
   return (
     <div
-      className="min-h-screen bg-[#1f1f1f]"
+      className="relative min-h-screen bg-[#1f1f1f]"
       onDrop={onDrop}
       onDragOver={onDragOver}
+      onDragEnter={onDragEnter}
+      onDragLeave={onDragLeave}
     >
-      <div className="mx-auto flex h-full max-w-md flex-col gap-4 p-4">
+      {isDragging ? (
+        <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center bg-[#1f1f1f]/80 p-4">
+          <div className="w-full max-w-xl rounded-xl border border-dashed border-[#79b8ff]/60 bg-[#1A1A1A] p-6 text-center">
+            <p className="text-sm font-medium text-[#E0E0E0]">Solte o arquivo aqui</p>
+            <p className="mt-1 text-xs text-[#727272]">
+              Suporta .zip, .rar, .7z, .tar, .tar.gz e .gz
+            </p>
+          </div>
+        </div>
+      ) : null}
+      <div className="mx-auto flex h-full w-full max-w-[600px] flex-col gap-4 p-4">
         <header
           className="flex items-center justify-between select-none"
           data-tauri-drag-region
@@ -49,9 +72,13 @@ function App() {
           </Button>
         </header>
 
-        <WayvibesStatusPanel />
+        <WayvibesStatusPanel lastKey={lastKey} audioSpectrum={audioSpectrum} />
         <AudioControlsPanel />
-        <SoundPacksPanel onImportClick={() => void onImportClick()} />
+        <SoundPacksPanel
+          onImportClick={() => void onImportClick()}
+          pulseId={pulseId}
+          audioSpectrum={audioSpectrum}
+        />
         <SettingsPanel />
 
         {lastError ? (
